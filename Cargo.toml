@@ -29,6 +29,7 @@ members = [
   "examples/pedersen",
   "examples/basic/token",
   "examples/basic/script",
+  "examples/erc6909",
 ]
 default-members = [
   "contracts",

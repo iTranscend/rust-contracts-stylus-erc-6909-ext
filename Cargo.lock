@@ -1855,6 +1855,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "erc6909-example"
+version = "0.2.0-rc.0"
+dependencies = [
+ "openzeppelin-stylus",
+ "stylus-sdk",
+]
+
+[[package]]
 name = "erc721-consecutive-example"
 version = "0.2.0-rc.0"
 dependencies = [
