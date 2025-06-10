@@ -12,8 +12,51 @@ mod sol {
     use alloy_sol_macro::sol;
 
     sol! {
-        event Transfer();
-        // TODO: fully define events
+        /// Emitted when a `caller` transfers an `amount` of token `id`
+        /// from a `sender` to a receiver.
+        ///
+        /// * `caller` - Address of the initiator of the transfer.
+        /// * `sender` - Address of the sender.
+        /// * `receiver` - Address of the receiver.
+        /// * `id` - Token id as a number.
+        /// * `amount` - Amount of token transferred.
+        #[derive(Debug)]
+        event Transfer(
+            address caller,
+            address indexed sender,
+            address indexed receiver,
+            uint256 indexed id,
+            uint256 amount,
+        );
+
+        /// Emitted when a token `owner` sets the `approved` status of
+        /// a `spender`.
+        ///
+        /// * `owner` - Address of the owner of the token.
+        /// * `spender` - Address of the spender.
+        /// * `approved` - Approved status as a boolean.
+        #[derive(Debug)]
+        event OperatorSet(
+            address indexed owner,
+            address indexed spender,
+            bool approved,
+        );
+
+        /// Emitted when a token `owner` has approved a `spender` to
+        /// transfer an `amount` of a token `id` to be transferred
+        /// on the owner’s behalf.
+        ///
+        /// * `owner` - Address of the owner of the token.
+        /// * `spender` - Address of the spender.
+        /// * `id` - Token id as a number.
+        /// * `amount` - Amount of token approved to be transferred.
+        #[derive(Debug)]
+        event Approval(
+            address indexed owner,
+            address indexed spender,
+            uint256 indexed id,
+            uint256 amount,
+        );
     }
 
     sol! {
