@@ -11,6 +11,7 @@ use crate::utils::introspection::erc165::IErc165;
 
 pub mod extensions;
 
+pub use sol::*;
 mod sol {
     use alloy_sol_macro::sol;
 
