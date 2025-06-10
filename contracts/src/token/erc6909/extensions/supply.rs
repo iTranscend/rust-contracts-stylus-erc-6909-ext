@@ -1,4 +1,6 @@
-use alloy_primitives::U256;
+use alloc::{vec, vec::Vec};
+
+use alloy_primitives::{FixedBytes, U256};
 use openzeppelin_stylus_proc::interface_id;
 use stylus_sdk::{
     prelude::*,
@@ -6,7 +8,7 @@ use stylus_sdk::{
 };
 
 use crate::{
-    token::erc6909::{self, Erc6909, IErc6909},
+    token::erc6909::{self, Erc6909, IErc6909, Error},
     utils::introspection::erc165::IErc165,
 };
 
@@ -25,7 +27,7 @@ impl Erc6909Supply {}
 
 #[interface_id]
 pub trait IErc6909Supply: IErc165 {
-    fn total_supply(id: U256) -> U256;
+    fn total_supply(&self, id: U256) -> U256;
 }
 
 #[public]
@@ -36,7 +38,7 @@ impl IErc165 for Erc6909Supply {
 }
 
 impl IErc6909Supply for Erc6909Supply {
-    fn total_supply(id: U256) -> U256 {
+    fn total_supply(&self, id: U256) -> U256 {
         // TODO: implement
         todo!()
     }
