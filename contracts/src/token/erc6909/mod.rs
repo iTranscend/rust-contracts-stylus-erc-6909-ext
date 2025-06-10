@@ -1,8 +1,11 @@
 use alloc::{vec, vec::Vec};
 
-use alloy_primitives::{FixedBytes, U256};
+use alloy_primitives::{Address, FixedBytes, U256};
 use openzeppelin_stylus_proc::interface_id;
-use stylus_sdk::{prelude::*, storage::StorageMap};
+use stylus_sdk::{
+    prelude::*,
+    storage::{StorageBool, StorageMap, StorageU256},
+};
 
 use crate::utils::introspection::erc165::IErc165;
 
@@ -121,13 +124,13 @@ pub enum Error {
 #[storage]
 pub struct Erc6909 {
     /// Maps owner addresses to token balances
-    pub(crate) balances: StorageMap<Address, StorageMap<U256, U256>>,
+    pub(crate) balances: StorageMap<Address, StorageMap<U256, StorageU256>>,
     /// Maps owner addresses to operator approval statuses
     pub(crate) operator_approvals:
-        StorageMap<Address, StorageMap<Address, bool>>,
+        StorageMap<Address, StorageMap<Address, StorageBool>>,
     ///Maps owner to a mapping of spender allowances for each token id.
     pub(crate) allowances:
-        StorageMap<Address, StorageMap<Address, StorageMap<U256, U256>>>,
+        StorageMap<Address, StorageMap<Address, StorageMap<U256, StorageU256>>>,
 }
 
 #[interface_id]
