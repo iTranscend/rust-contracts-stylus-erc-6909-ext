@@ -60,14 +60,62 @@ mod sol {
     }
 
     sol! {
-        error InsufficientBalance();
-        // TODO: fully define errors
+        /// Thrown when owner balance for id is insufficient.
+        ///
+        /// * `owner` - Address of the owner of the token.
+        /// * `id` - Token id as a number.
+        #[derive(Debug)]
+        error Erc6909InsufficientBalance(
+            address owner,
+            uint256 id
+        );
+
+        /// Thrown when the spender does not have permission to
+        /// spend the token.
+        ///
+        /// * `spender` - Address of the spender
+        /// * `id` - Token id as a number
+        #[derive(Debug)]
+        error Erc6909InsufficientPermission(
+            address spender,
+            uint256 id
+        );
+
+        /// Indicates a failure with the token `sender`.
+        /// Used in transfers.
+        ///
+        /// * `approver` - Approver of the token.
+        #[derive(Debug)]
+        error ERC6909InvalidApprover(address approver);
+
+        /// Indicates a failure with the token `sender`.
+        /// Used in transfers.
+        ///
+        /// * `sender` - Address whose tokens are being transferred.
+        #[derive(Debug)]
+        error ERC6909InvalidSender(address sender);
+
+        /// Indicates a failure with the token `receiver`.
+        /// Used in transfers.
+        ///
+        /// * `receiver` - Address to which tokens are being transferred.
+        #[derive(Debug)]
+        error ERC6909InvalidReceiver(address receiver);
     }
 }
 
 #[derive(SolidityError, Debug)]
 pub enum Error {
-    // TODO: Define errors
+    // Indicate an owner's token balance is insufficient
+    InsufficientBalance(Erc6909InsufficientBalance),
+    // Indicates the spender does not have permission to spend the token.
+    InsufficientPermission(Erc6909InsufficientPermission),
+    // Indicates the approver is invalid.
+    InvalidApprover(ERC6909InvalidApprover),
+    // Indicates the sender is invalid.
+    InvalidSender(ERC6909InvalidSender),
+    // Indicates the receiver is invalid.
+    InvalidReceiver(ERC6909InvalidReceiver),
 }
 
 #[storage]
