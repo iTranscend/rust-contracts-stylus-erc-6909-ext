@@ -192,7 +192,7 @@ pub trait IErc6909: IErc165 {
     ///
     /// # Events
     ///
-    /// * ['Transfer'] event.
+    /// * [`Transfer`] event.
     ///
     /// Returns a boolean value indicating success or failure.
     fn transfer(
@@ -224,7 +224,7 @@ pub trait IErc6909: IErc165 {
     ///
     /// # Events
     ///
-    /// * ['Transfer'] event.
+    /// * [`Transfer`] event.
     ///
     /// Returns a boolean value indicating success or failure.
     fn transfer_from(
@@ -251,7 +251,7 @@ pub trait IErc6909: IErc165 {
     ///
     /// # Events
     ///
-    /// * ['Approval'] event.
+    /// * [`Approval`] event.
     ///
     /// Returns a boolean value indicating success or failure.
     fn approve(
@@ -276,7 +276,7 @@ pub trait IErc6909: IErc165 {
     ///
     /// # Events
     ///
-    /// * ['OperatorSet'] event.
+    /// * [`OperatorSet `] event.
     ///
     /// Returns a boolean value indicating success or failure.
     fn set_operator(
@@ -415,7 +415,7 @@ impl Erc6909 {
     ///
     /// # Events
     ///
-    /// * ['Transfer'] event.
+    /// * [`Transfer`] event.
     fn _transfer(
         &mut self,
         from: Address,
@@ -454,7 +454,7 @@ impl Erc6909 {
     ///
     /// # Events
     ///
-    /// * ['Transfer'] event.
+    /// * [`Transfer`] event.
     fn _update(
         &mut self,
         from: Address,
@@ -511,7 +511,7 @@ impl Erc6909 {
     ///
     /// # Events
     ///
-    /// * ['Approval'] event.
+    /// * [`Approval`] event.
     fn _approve(
         &mut self,
         owner: Address,
@@ -555,7 +555,7 @@ impl Erc6909 {
     ///
     /// # Events
     ///
-    /// * ['OperatorSet'] event.
+    /// * [`OperatorSet `] event.
     fn _set_operator(
         &mut self,
         owner: Address,
@@ -595,8 +595,7 @@ impl Erc6909 {
     /// # Errors
     ///
     /// * [`Error::InsufficientAllowance`] - If `spender` does not have enough
-    ///   allowance
-    /// to spend `amount`
+    ///   allowance to spend `amount`
     fn _spend_allowance(
         &mut self,
         owner: Address,
