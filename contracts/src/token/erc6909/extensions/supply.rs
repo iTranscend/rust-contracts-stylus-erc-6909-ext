@@ -8,7 +8,7 @@ use stylus_sdk::{
 };
 
 use crate::{
-    token::erc6909::{self, Erc6909, IErc6909, Error},
+    token::erc6909::{self, Erc6909, Error, IErc6909},
     utils::introspection::erc165::IErc165,
 };
 
@@ -47,7 +47,7 @@ impl IErc6909Supply for Erc6909Supply {
 #[public]
 impl IErc6909 for Erc6909Supply {
     type Error = erc6909::Error;
-    
+
     // TODO: implement core interface
 }
 
