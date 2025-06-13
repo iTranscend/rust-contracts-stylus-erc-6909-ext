@@ -65,6 +65,28 @@ mod sol {
             uint256 indexed id,
             uint256 amount,
         );
+
+        /// Emitted when `value` amount of tokens of type `id` are
+        /// transferred from `from` to `to` by `caller`.
+        #[derive(Debug)]
+        event TransferSingle(
+            address indexed caller,
+            address indexed from,
+            address indexed to,
+            uint256 id,
+            uint256 amount
+        );
+
+        /// Equivalent to multiple [`TransferSingle`] events, where `caller`
+        /// `from` and `to` are the same for all transfers.
+        #[derive(Debug)]
+        event TransferBatch(
+            address indexed caller,
+            address indexed from,
+            address indexed to,
+            uint256[] ids,
+            uint256[] amounts
+        );
     }
 
     sol! {
@@ -132,6 +154,18 @@ mod sol {
         /// * `receiver` - Address to which tokens are being transferred.
         #[derive(Debug)]
         error ERC6909InvalidReceiver(address receiver);
+
+        /// Indicates an array length mismatch between token ids and values in a
+        /// batch operation.
+        ///
+        /// * `ids_length` - Length of the array of token identifiers.
+        /// * `values_length` - Length of the array of token amounts.
+        #[derive(Debug)]
+        #[allow(missing_docs)]
+        error ERC6909InvalidArrayLength(
+            uint256 ids_length,
+            uint256 values_length
+        );
     }
 }
 
@@ -152,6 +186,9 @@ pub enum Error {
     InvalidSpender(ERC6909InvalidSpender),
     /// Indicates the receiver is invalid.
     InvalidReceiver(ERC6909InvalidReceiver),
+    /// Indicates an array length mismatch between token ids and values in a
+    /// batch operation.
+    InvalidArrayLength(ERC6909InvalidArrayLength),
 }
 
 /// State of an [`Erc6909`] token.
@@ -433,7 +470,7 @@ impl Erc6909 {
                 receiver: to,
             }));
         }
-        self._update(from, to, id, amount)?;
+        self._update(from, to, vec![id], vec![amount])?;
         Ok(())
     }
 
@@ -459,34 +496,24 @@ impl Erc6909 {
         &mut self,
         from: Address,
         to: Address,
-        id: U256,
-        amount: U256,
+        ids: Vec<U256>,
+        amounts: Vec<U256>,
     ) -> Result<(), Error> {
+        Self::require_equal_arrays_length(&ids, &amounts)?;
+
         let caller = msg::sender();
 
-        if !from.is_zero() {
-            let from_balance = self.balance_of(from, id);
-            if from_balance < amount {
-                return Err(Error::InsufficientBalance(
-                    Erc6909InsufficientBalance {
-                        sender: from,
-                        balance: from_balance,
-                        needed: amount,
-                        id,
-                    },
-                ));
-            }
-            self.balances.setter(from).setter(id).sub_assign_unchecked(amount);
-        }
-        if !to.is_zero() {
-            self.balances.setter(to).setter(id).add_assign_checked(
-                amount,
-                "should not exceed `U256::MAX` for `balances`",
-            );
+        for (&token_id, &amount) in ids.iter().zip(amounts.iter()) {
+            self._do_update(from, to, token_id, amount)?;
         }
 
-        evm::log(Transfer { caller, sender: from, receiver: to, id, amount });
-
+        if ids.len() == 1 {
+            let id = ids[0];
+            let amount = amounts[0];
+            evm::log(TransferSingle { caller, from, to, id, amount });
+        } else {
+            evm::log(TransferBatch { caller, from, to, ids, amounts });
+        }
         Ok(())
     }
 
@@ -624,7 +651,313 @@ impl Erc6909 {
 
         Ok(())
     }
+
+    /// Creates an `amount` amount of tokens of type `id`, and assigns
+    /// them to `to`.
+    ///
+    /// # Arguments
+    ///
+    /// * `&mut self` - Write access to the contract's state.
+    /// * `to` - Account of the recipient.
+    /// * `id` - Token id.
+    /// * `amount` - Amount of tokens to be minted.
+    ///
+    /// # Errors
+    ///
+    /// * [`Error::InvalidReceiver`] - If `to` is [`Address::ZERO`].
+    ///
+    /// # Events
+    ///
+    /// * [`TransferSingle`].
+    ///
+    /// # Panics
+    ///
+    /// * If updated balance exceeds [`U256::MAX`].
+    pub fn _mint(
+        &mut self,
+        to: Address,
+        id: U256,
+        value: U256,
+    ) -> Result<(), Error> {
+        self._do_mint(to, vec![id], vec![value])
+    }
+
+    /// Batched version of [`Self::_mint`].
+    ///
+    /// # Arguments
+    ///
+    /// * `&mut self` - Write access to the contract's state.
+    /// * `to` - Account of the recipient.
+    /// * `ids` - Array of all tokens ids to be minted.
+    /// * `amounts` - Array of all amounts of tokens to be minted.
+    /// * `data` - Additional data with no specified format, sent in call to
+    ///   `to`.
+    ///
+    /// # Errors
+    ///
+    /// * [`Error::InvalidReceiver`] -  If `to` is [`Address::ZERO`].
+    /// * [`Error::InvalidArrayLength`] - If length of `ids` is not equal to
+    ///   length of `amounts`.
+    ///
+    /// # Events
+    ///
+    /// * [`TransferSingle`] - If the arrays contain one element.
+    /// * [`TransferBatch`] - If the arrays contain multiple elements.
+    ///
+    /// # Panics
+    ///
+    /// * If updated balance exceeds [`U256::MAX`].
+    pub fn _mint_batch(
+        &mut self,
+        to: Address,
+        ids: Vec<U256>,
+        amounts: Vec<U256>,
+    ) -> Result<(), Error> {
+        self._do_mint(to, ids, amounts)
+    }
+
+    /// Destroys an `amount` of tokens of type `id` from `from`.
+    ///
+    /// # Arguments
+    ///
+    /// * `&mut self` - Write access to the contract's state.
+    /// * `from` - Account to burn tokens from.
+    /// * `id` - Token id to be burnt.
+    /// * `amount` - Amount of tokens to be burnt.
+    ///
+    /// # Errors
+    ///
+    /// * [`Error::InvalidSender`] - If `from` is the [`Address::ZERO`].
+    /// * [`Error::InsufficientBalance`]  - If `amount` is greater than the
+    ///   token 'id' balance of the `from` account.
+    ///
+    /// # Events
+    ///
+    /// * [`TransferSingle`].
+    pub fn _burn(
+        &mut self,
+        from: Address,
+        id: U256,
+        amount: U256,
+    ) -> Result<(), Error> {
+        self._do_burn(from, vec![id], vec![amount])
+    }
+
+    /// Batched version of [`Self::_burn`].
+    ///
+    /// # Arguments
+    ///
+    /// * `&mut self` - Write access to the contract's state.
+    /// * `from` - Account to burn tokens from.
+    /// * `ids` - Array of all tokens ids to be burnt.
+    /// * `amounts` - Array of all amounts of tokens to be burnt.
+    ///
+    /// # Errors
+    ///
+    /// * [`Error::InvalidSender`] - If `from` is the [`Address::ZERO`].
+    /// * [`Error::InvalidArrayLength`] - If length of `ids` is not equal to
+    ///   length of `amounts`.
+    /// * [`Error::InsufficientBalance`] - If any of the `amounts` is greater
+    ///   than the balance of the respective token from `tokens` of the `from`
+    ///   account.
+    ///
+    /// # Events
+    ///
+    /// * [`TransferSingle`] - If the arrays contain one element.
+    /// * [`TransferBatch`] - If the arrays contain multiple elements.
+    pub fn _burn_batch(
+        &mut self,
+        from: Address,
+        ids: Vec<U256>,
+        amounts: Vec<U256>,
+    ) -> Result<(), Error> {
+        self._do_burn(from, ids, amounts)
+    }
+}
+
+impl Erc6909 {
+    /// Creates `amounts` of tokens specified by `ids`, and assigns
+    /// them to `to`.
+    ///
+    /// # Arguments
+    ///
+    /// * `&mut self` - Write access to the contract's state.
+    /// * `to` - Account of the recipient.
+    /// * `ids` - Array of all token ids to be minted.
+    /// * `amounts` - Array of all amounts of tokens to be minted.
+    ///
+    /// # Errors
+    ///
+    /// * [`Error::InvalidReceiver`] - If `to` is [`Address::ZERO`].
+    /// * [`Error::InvalidArrayLength`] -  If length of `ids` is not equal to
+    ///   length of `amounts`.
+    ///
+    /// # Events
+    ///
+    /// * [`TransferSingle`] - If the arrays contain one element.
+    /// * [`TransferBatch`] - If the array contain multiple elements.
+    ///
+    /// # Panics
+    ///
+    /// * If updated balance exceeds [`U256::MAX`].
+    fn _do_mint(
+        &mut self,
+        to: Address,
+        ids: Vec<U256>,
+        amounts: Vec<U256>,
+    ) -> Result<(), Error> {
+        if to.is_zero() {
+            return Err(Error::InvalidReceiver(ERC6909InvalidReceiver {
+                receiver: to,
+            }));
+        }
+
+        self._update(Address::ZERO, to, ids, amounts)?;
+
+        Ok(())
+    }
+
+    // Destroys `amounts` of tokens specified by `ids` from `from`.
+    ///
+    /// # Arguments
+    ///
+    /// * `&mut self` - Write access to the contract's state.
+    /// * `from` - Account to burn tokens from.
+    /// * `ids` - Array of all token ids to be burnt.
+    /// * `amounts` - Array of all amount of tokens to be burnt.
+    ///
+    /// # Errors
+    ///
+    /// * [`Error::InvalidSender`] - If `from` is the [`Address::ZERO`].
+    /// * [`Error::InvalidArrayLength`] - If length of `ids` is not equal to
+    ///   length of `amounts`.
+    /// * [`Error::InsufficientBalance`] - If any of the `amounts` is greater
+    ///   than the balance of the respective token from `ids` of the `from`
+    ///   account.
+    ///
+    /// # Events
+    ///
+    /// * [`TransferSingle`] - If the arrays contain one element.
+    /// * [`TransferBatch`] - If the arrays contain multiple elements.
+    fn _do_burn(
+        &mut self,
+        from: Address,
+        ids: Vec<U256>,
+        amounts: Vec<U256>,
+    ) -> Result<(), Error> {
+        if from.is_zero() {
+            return Err(Error::InvalidSender(ERC6909InvalidSender {
+                sender: from,
+            }));
+        }
+        self._update(from, Address::ZERO, ids, amounts)?;
+        Ok(())
+    }
+
+    /// Checks if `ids` array has same length as `values` array.
+    ///
+    /// # Arguments
+    ///
+    /// * `ids` - array of `ids`.
+    /// * `values` - array of `values`.
+    ///
+    /// # Errors
+    ///
+    /// * [`Error::InvalidArrayLength`] - If length of `ids` is not equal to
+    ///   length of `values`.
+    fn require_equal_arrays_length<T, U>(
+        ids: &[T],
+        values: &[U],
+    ) -> Result<(), Error> {
+        if ids.len() != values.len() {
+            return Err(Error::InvalidArrayLength(ERC6909InvalidArrayLength {
+                ids_length: U256::from(ids.len()),
+                values_length: U256::from(values.len()),
+            }));
+        }
+        Ok(())
+    }
+
+    /// Transfers a `amount` amount of `id` from `from` to
+    /// `to`. Will mint (or burn) if `from` (or `to`) is the [`Address::ZERO`].
+    ///
+    /// # Arguments
+    ///
+    /// * `&mut self` - Write access to the contract's state.
+    /// * `from` - Account to transfer tokens from.
+    /// * `to` - Account of the recipient.
+    /// * `id` - Token id.
+    /// * `amount` - Amount of tokens to be transferred.
+    ///
+    /// # Errors
+    ///
+    /// * [`Error::InsufficientBalance`] - If `amount` is greater than the
+    ///   balance of the `from` account.
+    ///
+    /// # Panics
+    ///
+    /// * If updated balance exceeds [`U256::MAX`].
+    fn _do_update(
+        &mut self,
+        from: Address,
+        to: Address,
+        id: U256,
+        amount: U256,
+    ) -> Result<(), Error> {
+        if !from.is_zero() {
+            let from_balance = self.balance_of(from, id);
+            if from_balance < amount {
+                return Err(Error::InsufficientBalance(
+                    Erc6909InsufficientBalance {
+                        sender: from,
+                        balance: from_balance,
+                        needed: amount,
+                        id,
+                    },
+                ));
+            }
+            self.balances.setter(from).setter(id).sub_assign_unchecked(amount);
+        } else {
+            // Mint
+            self.balances.setter(to).setter(id).add_assign_checked(
+                amount,
+                "should not exceed `U256::MAX` for `balances`",
+            );
+        }
+        if !to.is_zero() {
+            self.balances.setter(to).setter(id).add_assign_checked(
+                amount,
+                "should not exceed `U256::MAX` for `balances`",
+            );
+        } else {
+            // Burn
+            let from_balance = self.balance_of(from, id);
+            if from_balance < amount {
+                return Err(Error::InsufficientBalance(
+                    Erc6909InsufficientBalance {
+                        sender: from,
+                        balance: from_balance,
+                        needed: amount,
+                        id,
+                    },
+                ));
+            }
+            self.balances.setter(from).setter(id).sub_assign_unchecked(amount);
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    // mint
+
+    // transfer
+
+    // burn
+
+    // approve
+
+    // set_operator
+}
