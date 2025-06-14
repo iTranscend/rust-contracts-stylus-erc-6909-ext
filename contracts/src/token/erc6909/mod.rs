@@ -204,6 +204,9 @@ pub struct Erc6909 {
         StorageMap<Address, StorageMap<Address, StorageMap<U256, StorageU256>>>,
 }
 
+/// Implementation of [`TopLevelStorage`]
+unsafe impl TopLevelStorage for Erc6909 {}
+
 /// Required interface of an [`Erc6909`] compliant contract.
 #[interface_id]
 pub trait IErc6909: IErc165 {
@@ -563,8 +566,7 @@ impl Erc6909 {
         Ok(())
     }
 
-    /// Sets `amount` as the allowance of `spender` over the `owner`'s `id`
-    /// tokens.
+    /// Grants `spender` operator privileges over the `owner`'s account.
     ///
     /// # Arguments
     ///
@@ -572,7 +574,6 @@ impl Erc6909 {
     /// * `owner` - Address of acccount whose tokens a `spender` is approved to
     ///   spend.
     /// * `spender` - Address of account that will be allowed to spend an
-    ///   `amount` of `owner`'s tokens.
     /// * `approved` - Boolean status of whether an operator is approved or not
     ///
     /// # Errors
@@ -677,9 +678,9 @@ impl Erc6909 {
         &mut self,
         to: Address,
         id: U256,
-        value: U256,
+        amount: U256,
     ) -> Result<(), Error> {
-        self._do_mint(to, vec![id], vec![value])
+        self._do_mint(to, vec![id], vec![amount])
     }
 
     /// Batched version of [`Self::_mint`].
@@ -917,33 +918,34 @@ impl Erc6909 {
                 ));
             }
             self.balances.setter(from).setter(id).sub_assign_unchecked(amount);
-        } else {
-            // Mint
-            self.balances.setter(to).setter(id).add_assign_checked(
-                amount,
-                "should not exceed `U256::MAX` for `balances`",
-            );
         }
+        // else {
+        //     self.balances.setter(to).setter(id).add_assign_checked(
+        //         amount,
+        //         "should not exceed `U256::MAX` for `balances`",
+        //     );
+        // }
         if !to.is_zero() {
             self.balances.setter(to).setter(id).add_assign_checked(
                 amount,
                 "should not exceed `U256::MAX` for `balances`",
             );
-        } else {
-            // Burn
-            let from_balance = self.balance_of(from, id);
-            if from_balance < amount {
-                return Err(Error::InsufficientBalance(
-                    Erc6909InsufficientBalance {
-                        sender: from,
-                        balance: from_balance,
-                        needed: amount,
-                        id,
-                    },
-                ));
-            }
-            self.balances.setter(from).setter(id).sub_assign_unchecked(amount);
         }
+        // else {
+        //     // Burn
+        //     let from_balance = self.balance_of(from, id);
+        //     if from_balance < amount {
+        //         return Err(Error::InsufficientBalance(
+        //             Erc6909InsufficientBalance {
+        //                 sender: from,
+        //                 balance: from_balance,
+        //                 needed: amount,
+        //                 id,
+        //             },
+        //         ));
+        //     }
+        //     self.balances.setter(from).setter(id).
+        // sub_assign_unchecked(amount); }
 
         Ok(())
     }
@@ -951,13 +953,170 @@ impl Erc6909 {
 
 #[cfg(test)]
 mod tests {
-    // mint
+    use alloy_primitives::{fixed_bytes, uint, Address, FixedBytes, U256};
+    use motsu::prelude::*;
+    use stylus_sdk::console;
 
-    // transfer
+    use super::{Erc6909, IErc6909};
+    use crate::utils::introspection::erc165::IErc165;
 
-    // burn
+    const TOKEN_ID: U256 = uint!(1_U256);
 
-    // approve
+    #[motsu::test]
+    fn interface_id() {
+        let actual = <Erc6909 as IErc6909>::interface_id();
+        let expected: FixedBytes<4> = fixed_bytes!("0x0f632fb3");
+        assert_eq!(actual, expected);
+    }
 
-    // set_operator
+    #[motsu::test]
+    fn supports_interface(contract: Contract<Erc6909>, alice: Address) {
+        assert!(contract
+            .sender(alice)
+            .supports_interface(<Erc6909 as IErc6909>::interface_id()));
+        assert!(contract
+            .sender(alice)
+            .supports_interface(<Erc6909 as IErc165>::interface_id()));
+
+        let fake_interface_id = 0x12345678u32;
+        assert!(!contract
+            .sender(alice)
+            .supports_interface(fake_interface_id.into()));
+    }
+
+    #[motsu::test]
+    fn mint(contract: Contract<Erc6909>, alice: Address) {
+        contract
+            .sender(alice)
+            ._mint(alice, uint!(TOKEN_ID), uint!(1000_U256))
+            .expect("should mint a token to Alice");
+
+        let alice_balance =
+            contract.sender(alice).balance_of(alice, uint!(TOKEN_ID));
+
+        assert_eq!(alice_balance, uint!(1000_U256));
+    }
+
+    #[motsu::test]
+    fn transfer(contract: Contract<Erc6909>, alice: Address, bob: Address) {
+        contract
+            .sender(alice)
+            ._mint(alice, TOKEN_ID, uint!(1000_U256))
+            .expect("should mint a token to Alice");
+
+        contract
+            .sender(alice)
+            .transfer(bob, TOKEN_ID, uint!(500_U256))
+            .expect("should transfer 500 tokens from Alice to Bob");
+
+        let bob_balance = contract.sender(alice).balance_of(bob, TOKEN_ID);
+
+        assert_eq!(bob_balance, uint!(500_U256));
+    }
+
+    #[motsu::test]
+    fn transfer_from(
+        contract: Contract<Erc6909>,
+        alice: Address,
+        bob: Address,
+        charlie: Address,
+    ) {
+        contract
+            .sender(alice)
+            ._mint(alice, TOKEN_ID, uint!(1000_U256))
+            .expect("should mint a token to Alice");
+
+        contract
+            .sender(alice)
+            .approve(bob, TOKEN_ID, uint!(500_U256))
+            .expect("Bob should be able to spend to 300 of Alice's tokens");
+
+        contract
+            .sender(bob)
+            .transfer_from(alice, charlie, TOKEN_ID, uint!(500_U256))
+            .expect("should transfer 500 tokens from Alice to Bob");
+
+        let charlie_balance =
+            contract.sender(alice).balance_of(charlie, TOKEN_ID);
+
+        assert_eq!(charlie_balance, uint!(500_U256));
+    }
+
+    #[motsu::test]
+    fn burn(contract: Contract<Erc6909>, alice: Address) {
+        contract
+            .sender(alice)
+            ._mint(alice, uint!(TOKEN_ID), uint!(1000_U256))
+            .expect("should mint a token to Alice");
+
+        contract
+            .sender(alice)
+            ._burn(alice, uint!(TOKEN_ID), uint!(700_U256))
+            .expect("should mint a token to Alice");
+
+        let alice_balance =
+            contract.sender(alice).balance_of(alice, uint!(TOKEN_ID));
+
+        assert_eq!(alice_balance, uint!(300_U256));
+    }
+
+    #[motsu::test]
+    fn approve(
+        contract: Contract<Erc6909>,
+        alice: Address,
+        bob: Address,
+        charlie: Address,
+    ) {
+        contract
+            .sender(alice)
+            ._mint(alice, TOKEN_ID, uint!(1000_U256))
+            .expect("should mint a token to Alice");
+
+        contract
+            .sender(alice)
+            .approve(bob, TOKEN_ID, uint!(300_U256))
+            .expect("Bob should be able to spend to 300 of Alice's tokens");
+
+        contract
+            .sender(bob)
+            .transfer_from(alice, charlie, TOKEN_ID, uint!(200_U256))
+            .expect("should transfer 200 tokens from Alice to Charlie");
+
+        let alice_balance = contract.sender(alice).balance_of(alice, TOKEN_ID);
+        let charlie_balance =
+            contract.sender(alice).balance_of(charlie, TOKEN_ID);
+
+        assert_eq!(alice_balance, uint!(800_U256));
+        assert_eq!(charlie_balance, uint!(200_U256));
+    }
+
+    #[motsu::test]
+    fn set_operator(
+        contract: Contract<Erc6909>,
+        alice: Address,
+        bob: Address,
+        charlie: Address,
+    ) {
+        contract
+            .sender(alice)
+            ._mint(alice, TOKEN_ID, uint!(1000_U256))
+            .expect("should mint a token to Alice");
+
+        contract
+            .sender(alice)
+            .set_operator(bob, true)
+            .expect("Bob should become an operator of Alice's account'");
+
+        contract
+            .sender(bob)
+            .transfer_from(alice, charlie, TOKEN_ID, uint!(100_U256))
+            .expect("should transfer 100 tokens from Alice to Charlie");
+
+        let alice_balance = contract.sender(alice).balance_of(alice, TOKEN_ID);
+        let charlie_balance =
+            contract.sender(alice).balance_of(charlie, TOKEN_ID);
+
+        assert_eq!(alice_balance, uint!(900_U256));
+        assert_eq!(charlie_balance, uint!(100_U256));
+    }
 }
