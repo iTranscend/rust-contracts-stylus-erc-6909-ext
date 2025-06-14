@@ -919,33 +919,13 @@ impl Erc6909 {
             }
             self.balances.setter(from).setter(id).sub_assign_unchecked(amount);
         }
-        // else {
-        //     self.balances.setter(to).setter(id).add_assign_checked(
-        //         amount,
-        //         "should not exceed `U256::MAX` for `balances`",
-        //     );
-        // }
+
         if !to.is_zero() {
             self.balances.setter(to).setter(id).add_assign_checked(
                 amount,
                 "should not exceed `U256::MAX` for `balances`",
             );
         }
-        // else {
-        //     // Burn
-        //     let from_balance = self.balance_of(from, id);
-        //     if from_balance < amount {
-        //         return Err(Error::InsufficientBalance(
-        //             Erc6909InsufficientBalance {
-        //                 sender: from,
-        //                 balance: from_balance,
-        //                 needed: amount,
-        //                 id,
-        //             },
-        //         ));
-        //     }
-        //     self.balances.setter(from).setter(id).
-        // sub_assign_unchecked(amount); }
 
         Ok(())
     }
