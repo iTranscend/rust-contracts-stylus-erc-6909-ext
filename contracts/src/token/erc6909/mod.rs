@@ -3,7 +3,6 @@ use alloc::{vec, vec::Vec};
 
 use alloy_primitives::{Address, FixedBytes, U256};
 use openzeppelin_stylus_proc::interface_id;
-// pub mod extensions;
 pub use sol::*;
 use stylus_sdk::{
     evm, msg,
@@ -15,6 +14,9 @@ use crate::utils::{
     introspection::erc165::IErc165,
     math::storage::{AddAssignChecked, SubAssignUnchecked},
 };
+
+/// Extensions to the ERC-6909 contract.
+pub mod extensions;
 
 mod sol {
     use alloy_sol_macro::sol;
@@ -66,7 +68,7 @@ mod sol {
             uint256 amount,
         );
 
-        /// Emitted when `value` amount of tokens of type `id` are
+        /// Emitted when `amount` of tokens of type `id` are
         /// transferred from `from` to `to` by `caller`.
         #[derive(Debug)]
         event TransferSingle(
@@ -325,7 +327,7 @@ pub trait IErc6909: IErc165 {
         approved: bool,
     ) -> Result<bool, Self::Error>;
 
-    /// Returns the value of tokens of type `id` owned by `owner`.
+    /// Returns the amount of tokens of type `id` owned by `owner`.
     ///
     /// # Arguments
     ///
@@ -334,7 +336,7 @@ pub trait IErc6909: IErc165 {
     /// * `id` - Token id as a number.
     fn balance_of(&self, owner: Address, id: U256) -> U256;
 
-    /// Returns the value of tokens of type `id` owned by `owner`,
+    /// Returns the amount of tokens of type `id` owned by `owner`,
     /// that can be spent by `spender`.
     ///
     /// # Arguments
