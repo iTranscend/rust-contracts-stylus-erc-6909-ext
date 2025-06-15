@@ -127,6 +127,19 @@ impl Erc6909Supply {
         self._do_mint(to, vec![id], vec![amount])
     }
 
+    /// Batched version of [`Self::_mint`].
+    ///
+    /// Re-export of [`Erc6909::_mint_batch`].
+    #[allow(clippy::missing_errors_doc)]
+    pub fn _mint_batch(
+        &mut self,
+        to: Address,
+        ids: Vec<U256>,
+        values: Vec<U256>,
+    ) -> Result<(), erc6909::Error> {
+        self._do_mint(to, ids, values)
+    }
+
     /// Destroys an `amount` of tokens of type `id` from `from`.
     ///
     /// Re-export of [`Erc6909::_burn`].
@@ -138,6 +151,19 @@ impl Erc6909Supply {
         amount: U256,
     ) -> Result<(), erc6909::Error> {
         self._do_burn(from, vec![id], vec![amount])
+    }
+
+    /// Batched version of [`Self::_burn`].
+    ///
+    /// Re-export of [`Erc6909::_burn_batch`].
+    #[allow(clippy::missing_errors_doc)]
+    pub fn _burn_batch(
+        &mut self,
+        from: Address,
+        ids: Vec<U256>,
+        values: Vec<U256>,
+    ) -> Result<(), erc6909::Error> {
+        self._do_burn(from, ids, values)
     }
 }
 
