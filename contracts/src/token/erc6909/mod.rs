@@ -937,7 +937,6 @@ impl Erc6909 {
 mod tests {
     use alloy_primitives::{fixed_bytes, uint, Address, FixedBytes, U256};
     use motsu::prelude::*;
-    use stylus_sdk::console;
 
     use super::{Erc6909, IErc6909};
     use crate::utils::introspection::erc165::IErc165;

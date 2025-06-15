@@ -46,7 +46,7 @@ pub trait IErc6909Supply: IErc165 {
 #[public]
 impl IErc165 for Erc6909Supply {
     fn supports_interface(&self, interface_id: FixedBytes<4>) -> bool {
-        <Self as IErc6909>::interface_id() == interface_id
+        <Self as IErc6909Supply>::interface_id() == interface_id
             || self.erc6909.supports_interface(interface_id)
             || <Self as IErc165>::interface_id() == interface_id
     }
@@ -281,4 +281,215 @@ impl Erc6909Supply {
 }
 
 #[cfg(test)]
-mod tests {}
+mod tests {
+    use alloy_primitives::{fixed_bytes, Address, FixedBytes, U256};
+    use motsu::prelude::*;
+
+    use super::*;
+    use crate::{
+        token::erc6909::{
+            extensions::{Erc6909Supply, IErc6909Supply},
+            ERC6909InvalidReceiver, ERC6909InvalidSender,
+        },
+        utils::introspection::erc165::IErc165,
+    };
+
+    pub(crate) fn random_token_ids(size: usize) -> Vec<U256> {
+        (0..size).map(U256::from).collect()
+    }
+
+    pub(crate) fn random_values(size: usize) -> Vec<U256> {
+        (1..=size).map(U256::from).collect()
+    }
+
+    unsafe impl TopLevelStorage for Erc6909Supply {}
+
+    fn init(
+        contract: &mut Erc6909Supply,
+        receiver: Address,
+        size: usize,
+    ) -> (Vec<U256>, Vec<U256>) {
+        let token_ids = random_token_ids(size);
+        let values = random_values(size);
+
+        contract
+            ._mint_batch(receiver, token_ids.clone(), values.clone())
+            .expect("should mint");
+        (token_ids, values)
+    }
+
+    #[motsu::test]
+    fn before_mint(contract: Contract<Erc6909Supply>, alice: Address) {
+        let token_id = random_token_ids(1)[0];
+        assert_eq!(U256::ZERO, contract.sender(alice).total_supply(token_id));
+    }
+
+    #[motsu::test]
+    fn after_mint_single(
+        contract: Contract<Erc6909Supply>,
+        alice: Address,
+        bob: Address,
+    ) {
+        let (token_ids, values) =
+            contract.init(alice, |contract| init(contract, bob, 1));
+        assert_eq!(
+            values[0],
+            contract.sender(alice).balance_of(bob, token_ids[0])
+        );
+        assert_eq!(
+            values[0],
+            contract.sender(alice).total_supply(token_ids[0])
+        );
+    }
+
+    #[motsu::test]
+    fn after_mint_batch(
+        contract: Contract<Erc6909Supply>,
+        alice: Address,
+        bob: Address,
+    ) {
+        let (token_ids, values) =
+            contract.init(alice, |contract| init(contract, bob, 4));
+        for (&token_id, &value) in token_ids.iter().zip(values.iter()) {
+            assert_eq!(value, contract.sender(alice).balance_of(bob, token_id));
+            assert_eq!(value, contract.sender(alice).total_supply(token_id));
+        }
+    }
+
+    #[motsu::test]
+    fn mint_reverts_on_invalid_receiver(
+        contract: Contract<Erc6909Supply>,
+        alice: Address,
+    ) {
+        let token_id = random_token_ids(1)[0];
+        let two = U256::from(2);
+        let invalid_receiver = Address::ZERO;
+
+        let err = contract
+            .sender(alice)
+            ._mint(invalid_receiver, token_id, two)
+            .expect_err("should revert with `InvalidReceiver`");
+
+        assert!(matches!(
+            err,
+            Error::InvalidReceiver(ERC6909InvalidReceiver {
+                receiver
+            }) if receiver == invalid_receiver
+        ));
+    }
+
+    #[motsu::test]
+    #[should_panic = "should not exceed `U256::MAX` for `total_supply`"]
+    fn mint_panics_on_total_supply_overflow(
+        contract: Contract<Erc6909Supply>,
+        alice: Address,
+        bob: Address,
+        dave: Address,
+    ) {
+        let token_id = random_token_ids(1)[0];
+        let two = U256::from(2);
+        let three = U256::from(3);
+        contract
+            .sender(alice)
+            ._mint(bob, token_id, U256::MAX / two)
+            .expect("should mint to bob");
+        contract
+            .sender(alice)
+            ._mint(dave, token_id, U256::MAX / two)
+            .expect("should mint to dave");
+        // This should panic.
+        _ = contract.sender(alice)._mint(bob, token_id, three);
+    }
+
+    #[motsu::test]
+    fn after_burn_single(
+        contract: Contract<Erc6909Supply>,
+        alice: Address,
+        bob: Address,
+    ) {
+        let (token_ids, values) =
+            contract.init(alice, |contract| init(contract, bob, 1));
+        contract
+            .sender(alice)
+            ._burn(bob, token_ids[0], values[0])
+            .expect("should burn");
+
+        assert_eq!(
+            U256::ZERO,
+            contract.sender(alice).total_supply(token_ids[0])
+        );
+    }
+
+    #[motsu::test]
+    fn after_burn_batch(
+        contract: Contract<Erc6909Supply>,
+        alice: Address,
+        bob: Address,
+    ) {
+        let (token_ids, values) =
+            contract.init(alice, |contract| init(contract, bob, 4));
+        contract
+            .sender(alice)
+            ._burn_batch(bob, token_ids.clone(), values.clone())
+            .expect("should burn batch");
+
+        for &token_id in &token_ids {
+            assert_eq!(
+                U256::ZERO,
+                contract.sender(alice).balance_of(bob, token_id)
+            );
+            assert_eq!(
+                U256::ZERO,
+                contract.sender(alice).total_supply(token_id)
+            );
+        }
+    }
+
+    #[motsu::test]
+    fn burn_reverts_when_invalid_sender(
+        contract: Contract<Erc6909Supply>,
+        alice: Address,
+        bob: Address,
+    ) {
+        let (token_ids, values) =
+            contract.init(alice, |contract| init(contract, bob, 1));
+        let invalid_sender = Address::ZERO;
+
+        let err = contract
+            .sender(alice)
+            ._burn(invalid_sender, token_ids[0], values[0])
+            .expect_err("should not burn token for invalid sender");
+
+        assert!(matches!(
+            err,
+            Error::InvalidSender(ERC6909InvalidSender {
+                sender
+            }) if sender == invalid_sender
+        ));
+    }
+
+    #[motsu::test]
+    fn interface_id() {
+        let actual = <Erc6909Supply as IErc6909Supply>::interface_id();
+        let expected: FixedBytes<4> = fixed_bytes!("0xbd85b039");
+        assert_eq!(actual, expected);
+    }
+
+    #[motsu::test]
+    fn supports_interface(contract: Contract<Erc6909Supply>, alice: Address) {
+        assert!(contract.sender(alice).supports_interface(
+            <Erc6909Supply as IErc6909Supply>::interface_id()
+        ));
+        assert!(contract
+            .sender(alice)
+            .supports_interface(<Erc6909Supply as IErc165>::interface_id()));
+        assert!(contract
+            .sender(alice)
+            .supports_interface(<Erc6909Supply as IErc6909>::interface_id()));
+
+        let fake_interface_id = 0x12345678u32;
+        assert!(!contract
+            .sender(alice)
+            .supports_interface(fake_interface_id.into()));
+    }
+}
