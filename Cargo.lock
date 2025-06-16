@@ -1858,6 +1858,7 @@ dependencies = [
 name = "erc6909-example"
 version = "0.2.0-rc.0"
 dependencies = [
+ "alloy-primitives",
  "openzeppelin-stylus",
  "stylus-sdk",
 ]
@@ -1866,6 +1867,7 @@ dependencies = [
 name = "erc6909-supply-example"
 version = "0.2.0-rc.0"
 dependencies = [
+ "alloy-primitives",
  "openzeppelin-stylus",
  "stylus-sdk",
 ]
