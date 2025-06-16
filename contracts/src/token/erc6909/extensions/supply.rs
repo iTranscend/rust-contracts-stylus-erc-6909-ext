@@ -117,6 +117,12 @@ impl Erc6909Supply {
     /// Creates an `amount` of tokens of type `id`, and assigns
     /// them to `to`.
     ///
+    /// # Errors
+    ///
+    /// * [`Error::InvalidReceiver`] - If `to` is [`Address::ZERO`].
+    /// * [`Error::InvalidArrayLength`] - If length of `ids` is not equal to
+    ///   length of `amounts`.
+    ///
     /// Re-export of [`Erc6909::_mint`].
     pub fn _mint(
         &mut self,
@@ -180,7 +186,7 @@ impl Erc6909Supply {
             ));
         }
 
-        self._update(Address::ZERO, to, ids.clone(), amounts.clone())?;
+        self._update(Address::ZERO, to, ids, amounts)?;
 
         Ok(())
     }
@@ -204,7 +210,6 @@ impl Erc6909Supply {
 
     /// Extended version of [`Erc6909::_update`] that updates the supply of
     /// tokens.
-
     /// # Arguments
     ///
     /// * `&mut self` - Write access to the contract's state.
