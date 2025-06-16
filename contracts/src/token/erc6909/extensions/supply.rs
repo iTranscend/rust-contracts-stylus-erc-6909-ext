@@ -254,7 +254,7 @@ impl Erc6909Supply {
         }
 
         if to.is_zero() {
-            for (token_id, &amount) in ids.into_iter().zip(amounts.iter()) {
+            for (token_id, amount) in ids.into_iter().zip(amounts.into_iter()) {
                 self.total_supply.setter(token_id).sub_assign_unchecked(amount);
             }
         }
