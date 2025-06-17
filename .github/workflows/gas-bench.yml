@@ -23,8 +23,6 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           cache-key: "gas-bench"
-          toolchain: nightly-2025-03-01
-          target: x86_64-unknown-linux-gnu
           rustflags: ""
 
       - name: Install cargo-stylus
