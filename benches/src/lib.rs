@@ -12,6 +12,7 @@ pub mod erc1155_metadata_uri;
 pub mod erc1155_supply;
 pub mod erc20;
 pub mod erc6909;
+pub mod erc6909_supply;
 pub mod erc721;
 pub mod merkle_proofs;
 pub mod ownable;
