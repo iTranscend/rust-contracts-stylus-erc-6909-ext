@@ -19,7 +19,25 @@ struct Erc6909Example {
 
 #[public]
 #[implements(IErc6909<Error = erc6909::Error>)]
-impl Erc6909Example {}
+impl Erc6909Example {
+    fn mint(
+        &mut self,
+        to: Address,
+        id: U256,
+        amount: U256,
+    ) -> Result<(), <Erc6909Example as IErc6909>::Error> {
+        self.erc6909._mint(to, id, amount)
+    }
+
+    fn mint_batch(
+        &mut self,
+        to: Address,
+        ids: Vec<U256>,
+        amounts: Vec<U256>,
+    ) -> Result<(), <Erc6909Example as IErc6909>::Error> {
+        self.erc6909._mint_batch(to, ids, amounts)
+    }
+}
 
 #[public]
 impl IErc6909 for Erc6909Example {
