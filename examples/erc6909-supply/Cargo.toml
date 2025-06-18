@@ -1,6 +1,5 @@
 [package]
 name = "erc6909-supply-example"
-authors.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
@@ -12,8 +11,11 @@ openzeppelin-stylus.workspace = true
 alloy-primitives = { workspace = true, features = ["tiny-keccak"] }
 stylus-sdk.workspace = true
 
-[lints]
-workspace = true
+[dev-dependencies]
+alloy.workspace = true
+eyre.workspace = true
+tokio.workspace = true
+e2e.workspace = true
 
 [features]
 e2e = []

@@ -1871,9 +1871,13 @@ dependencies = [
 name = "erc6909-supply-example"
 version = "0.2.0-rc.0"
 dependencies = [
+ "alloy",
  "alloy-primitives",
+ "e2e",
+ "eyre",
  "openzeppelin-stylus",
  "stylus-sdk",
+ "tokio",
 ]
 
 [[package]]
