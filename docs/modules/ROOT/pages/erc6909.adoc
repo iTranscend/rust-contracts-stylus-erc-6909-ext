@@ -1,0 +1,16 @@
+= ERC-6909
+
+ERC6909 is a minimal specification for managing multiple tokens by their id in a single contract.
+
+[[erc6909-token-extensions]]
+== Extensions
+
+Additionally, there are multiple custom extensions, including:
+
+* xref:erc6909-supply.adoc[ERC-6909 Supply]: Extension of the ERC-6909 standard that adds tracking of total supply per token id.
+
+* ERC-6909 Metadata: Optional extension that adds token metadata support.
+
+* ERC-6909 ContentURI: Optional extension that adds a contract URI support.
+
+Currently, only the Supply extension has been fully implemented, Metadata and ContentUri have been designed, and will be implemented soon.
