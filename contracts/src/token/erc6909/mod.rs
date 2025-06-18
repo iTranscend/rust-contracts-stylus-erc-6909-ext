@@ -54,7 +54,7 @@ mod sol {
 
         /// Emitted when a token `owner` has approved a `spender` to
         /// transfer an `amount` of a token `id` to be transferred
-        /// on the owner’s behalf.
+        /// on the owner's behalf.
         ///
         /// * `owner` - Address of the owner of the token.
         /// * `spender` - Address of the spender.
@@ -92,7 +92,7 @@ mod sol {
     }
 
     sol! {
-        /// Thrown when `owner`` balance for `id`` is insufficient.
+        /// Thrown when `owner`'s balance for `id` is insufficient.
         ///
         /// * `owner` - Address of the owner of the token.
         /// * `id` - Token id as a number.
@@ -116,7 +116,7 @@ mod sol {
         );
 
         /// Thrown when a `spender`'s allowance for a token type
-        /// of `id`` is insufficient.
+        /// of `id` is insufficient.
         ///
         /// * `owner` - Address of the owner of the token.
         /// * `id` - Token id as a number.
