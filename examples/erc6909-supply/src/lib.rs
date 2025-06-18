@@ -17,12 +17,12 @@ use stylus_sdk::prelude::*;
 
 #[entrypoint]
 #[storage]
-struct Erc6909Example {
+struct Erc6909SupplyExample {
     erc6909_supply: Erc6909Supply,
 }
 
 #[public]
-impl IErc6909 for Erc6909Example {
+impl IErc6909 for Erc6909SupplyExample {
     type Error = erc6909::Error;
 
     fn transfer(
@@ -75,14 +75,14 @@ impl IErc6909 for Erc6909Example {
 }
 
 #[public]
-impl IErc6909Supply for Erc6909Example {
+impl IErc6909Supply for Erc6909SupplyExample {
     fn total_supply(&self, id: U256) -> U256 {
         self.erc6909_supply.total_supply(id)
     }
 }
 
 #[public]
-impl IErc165 for Erc6909Example {
+impl IErc165 for Erc6909SupplyExample {
     fn supports_interface(&self, interface_id: FixedBytes<4>) -> bool {
         self.erc6909_supply.supports_interface(interface_id)
     }
@@ -90,40 +90,40 @@ impl IErc165 for Erc6909Example {
 
 #[public]
 #[implements(IErc6909<Error = erc6909::Error>, IErc6909Supply, IErc165)]
-impl Erc6909Example {
+impl Erc6909SupplyExample {
     fn mint(
         &mut self,
         to: Address,
         id: U256,
-        value: U256,
-    ) -> Result<(), <Erc6909Example as IErc6909>::Error> {
-        self.erc6909_supply._mint(to, id, value)
+        amount: U256,
+    ) -> Result<(), <Erc6909SupplyExample as IErc6909>::Error> {
+        self.erc6909_supply._mint(to, id, amount)
     }
 
     fn mint_batch(
         &mut self,
         to: Address,
         ids: Vec<U256>,
-        values: Vec<U256>,
-    ) -> Result<(), <Erc6909Example as IErc6909>::Error> {
-        self.erc6909_supply._mint_batch(to, ids, values)
+        amounts: Vec<U256>,
+    ) -> Result<(), <Erc6909SupplyExample as IErc6909>::Error> {
+        self.erc6909_supply._mint_batch(to, ids, amounts)
     }
 
     fn burn(
         &mut self,
         from: Address,
         id: U256,
-        value: U256,
-    ) -> Result<(), <Erc6909Example as IErc6909>::Error> {
-        self.erc6909_supply._burn(from, id, value)
+        amount: U256,
+    ) -> Result<(), <Erc6909SupplyExample as IErc6909>::Error> {
+        self.erc6909_supply._burn(from, id, amount)
     }
 
     fn burn_batch(
         &mut self,
         from: Address,
         ids: Vec<U256>,
-        values: Vec<U256>,
-    ) -> Result<(), <Erc6909Example as IErc6909>::Error> {
-        self.erc6909_supply._burn_batch(from, ids, values)
+        amounts: Vec<U256>,
+    ) -> Result<(), <Erc6909SupplyExample as IErc6909>::Error> {
+        self.erc6909_supply._burn_batch(from, ids, amounts)
     }
 }
