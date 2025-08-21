@@ -1,0 +1,100 @@
+#![cfg_attr(not(any(test, feature = "export-abi")), no_main)]
+#![allow(clippy::result_large_err)]
+extern crate alloc;
+
+use alloc::vec::Vec;
+
+use alloy_primitives::{Address, FixedBytes, U256};
+use openzeppelin_stylus::{
+    token::erc6909::{self, Erc6909, IErc6909},
+    utils::introspection::erc165::IErc165,
+};
+use stylus_sdk::prelude::*;
+
+#[entrypoint]
+#[storage]
+struct Erc6909Example {
+    erc6909: Erc6909,
+}
+
+#[public]
+#[implements(IErc6909<Error = erc6909::Error>)]
+impl Erc6909Example {
+    fn mint(
+        &mut self,
+        to: Address,
+        id: U256,
+        amount: U256,
+    ) -> Result<(), <Erc6909Example as IErc6909>::Error> {
+        self.erc6909._mint(to, id, amount)
+    }
+
+    fn mint_batch(
+        &mut self,
+        to: Address,
+        ids: Vec<U256>,
+        amounts: Vec<U256>,
+    ) -> Result<(), <Erc6909Example as IErc6909>::Error> {
+        self.erc6909._mint_batch(to, ids, amounts)
+    }
+}
+
+#[public]
+impl IErc6909 for Erc6909Example {
+    type Error = erc6909::Error;
+
+    fn transfer(
+        &mut self,
+        receiver: Address,
+        id: U256,
+        amount: U256,
+    ) -> Result<bool, Self::Error> {
+        self.erc6909.transfer(receiver, id, amount)
+    }
+
+    fn transfer_from(
+        &mut self,
+        sender: Address,
+        receiver: Address,
+        id: U256,
+        amount: U256,
+    ) -> Result<bool, Self::Error> {
+        self.erc6909.transfer_from(sender, receiver, id, amount)
+    }
+
+    fn approve(
+        &mut self,
+        spender: Address,
+        id: U256,
+        amount: U256,
+    ) -> Result<bool, Self::Error> {
+        self.erc6909.approve(spender, id, amount)
+    }
+
+    fn set_operator(
+        &mut self,
+        spender: Address,
+        approved: bool,
+    ) -> Result<bool, Self::Error> {
+        self.erc6909.set_operator(spender, approved)
+    }
+
+    fn balance_of(&self, owner: Address, id: U256) -> U256 {
+        self.erc6909.balance_of(owner, id)
+    }
+
+    fn allowance(&self, owner: Address, spender: Address, id: U256) -> U256 {
+        self.erc6909.allowance(owner, spender, id)
+    }
+
+    fn is_operator(&self, owner: Address, spender: Address) -> bool {
+        self.erc6909.is_operator(owner, spender)
+    }
+}
+
+#[public]
+impl IErc165 for Erc6909Example {
+    fn supports_interface(&self, interface_id: FixedBytes<4>) -> bool {
+        self.erc6909.supports_interface(interface_id)
+    }
+}

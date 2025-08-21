@@ -14,7 +14,7 @@ opt_wasm() {
   echo
   echo "Optimizing $CONTRACT_CRATE_NAME WASM binary"
   # https://rustwasm.github.io/book/reference/code-size.html#use-the-wasm-opt-tool
-  wasm-opt -O3 -o ./target/wasm32-unknown-unknown/release/"$CONTRACT_OPT_BIN_NAME" ./target/wasm32-unknown-unknown/release/"$CONTRACT_BIN_NAME"
+  wasm-opt --enable-bulk-memory -O3 -o ./target/wasm32-unknown-unknown/release/"$CONTRACT_OPT_BIN_NAME" ./target/wasm32-unknown-unknown/release/"$CONTRACT_BIN_NAME"
 }
 
 # Retrieve all alphanumeric contract's crate names in `./examples` directory.
@@ -24,7 +24,9 @@ get_example_crate_names() {
   find ./examples -maxdepth 2 -type f -name "Cargo.toml" | xargs grep 'name = ' | grep -oE '".*"' | tr -d "'\""
 }
 
-cargo build --release --target wasm32-unknown-unknown -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort
+cargo build --release --target wasm32-unknown-unknown \
+  -Z build-std=std,panic_abort \
+  -Z build-std-features=panic_immediate_abort
 
 # Optimize contract's wasm for gas usage.
 for CRATE_NAME in $(get_example_crate_names); do
@@ -32,7 +34,7 @@ for CRATE_NAME in $(get_example_crate_names); do
 done
 
 export RPC_URL=http://localhost:8547
-export DEPLOYER_ADDRESS=0x6ac4839Bfe169CadBBFbDE3f29bd8459037Bf64e
+export DEPLOYER_ADDRESS=0xcEcba2F1DC234f70Dd89F2041029807F8D03A990
 
 # No need to compile benchmarks with `--release`
 # since this only runs the benchmarking code and the contracts have already been compiled with `--release`.

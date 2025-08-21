@@ -29,6 +29,8 @@ members = [
   "examples/pedersen",
   "examples/basic/token",
   "examples/basic/script",
+  "examples/erc6909",
+  "examples/erc6909-supply",
 ]
 default-members = [
   "contracts",
@@ -48,6 +50,8 @@ default-members = [
   "examples/erc1155",
   "examples/erc1155-metadata-uri",
   "examples/erc1155-supply",
+  "examples/erc6909",
+  "examples/erc6909-supply",
   "examples/erc4626",
   "examples/safe-erc20",
   "examples/merkle-proofs",
